@@ -50,4 +50,6 @@ pandas
 matplotlib
 scikit-learn
 wordcloud
+plotly
+seaborn
 streamlit

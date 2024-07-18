@@ -7,6 +7,17 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import classification_report
 from wordcloud import WordCloud
 
+try:
+    import plotly.graph_objects as go
+    import plotly.express as px
+except ImportError:
+    st.warning("Plotly is not installed. Install it to use interactive visualizations.")
+
+try:
+    import seaborn as sns
+except ImportError:
+    st.warning("Seaborn is not installed. Some visualizations may not work properly.")
+
 # Function to detect language given text and selected language
 def detect_language(text, selected_language):
     try:
@@ -73,6 +84,28 @@ def create_word_cloud(results):
     plt.imshow(wordcloud, interpolation='bilinear')
     plt.axis('off')
     st.pyplot(plt)
+
+# Function to plot pie chart
+def plot_pie_chart(language_counts):
+    if not language_counts.empty:
+        fig = px.pie(language_counts, names=language_counts.index, values=language_counts.values, 
+                     title='Language Distribution in Batch Results',
+                     color_discrete_sequence=px.colors.sequential.Plasma)
+        st.plotly_chart(fig)
+    else:
+        st.warning("No data available for pie chart visualization.")
+
+# Function to plot interactive bar chart
+def plot_interactive_bar_chart(language_counts):
+    if not language_counts.empty:
+        fig = go.Figure([go.Bar(x=language_counts.index, y=language_counts.values, 
+                               marker_color='lightsalmon')])
+        fig.update_layout(title='Language Distribution in Batch Results',
+                          xaxis_title='Languages',
+                          yaxis_title='Counts')
+        st.plotly_chart(fig)
+    else:
+        st.warning("No data available for interactive bar chart.")
 
 # Main function to create the Streamlit app
 def main():
@@ -157,51 +190,50 @@ def main():
             if confidence is None:
                 st.success(f'Detected Language: {detected_language}')
             elif confidence >= confidence_threshold:
-                st.success(f'Detected Language: {detected_language} (Confidence: {confidence:.2f})')
+                st.success(f'Detected Language: {detected_language}')
+                st.write(f'Confidence: {confidence:.2f}')
             else:
-                st.warning(f'Confidence below threshold ({confidence_threshold:.2f}): No language detected.')
+                st.warning(f'Confidence below threshold. Detected Language: {detected_language}')
+                st.write(f'Confidence: {confidence:.2f}')
+        else:
+            st.warning("Please enter some text.")
 
-    # Text input box for batch processing
-    st.header('Batch Processing')
-    batch_text_input = st.text_area('Enter multiple texts (one per line) for batch processing:', '')
+    # Text input box for batch detection
+    st.header('Batch Text Detection')
+    batch_texts = st.text_area('Enter multiple texts for batch detection (one per line):', '').split('\n')
 
-    # Language selection dropdown for batch processing
-    selected_language_batch = st.selectbox('Select language to detect for batch processing:', languages)
+    # Language selection dropdown for batch detection
+    selected_language_batch = st.selectbox('Select language to detect for batch:', languages)
 
-    # Detect languages for batch processing on button click
-    if st.button('Detect Languages (Batch Processing)'):
-        if batch_text_input:
-            texts = batch_text_input.split('\n')
-            results = detect_languages_batch(texts, selected_language_batch)
-
-            # Display batch processing results
-            st.subheader('Batch Processing Results:')
+    # Detect languages for batch texts on button click
+    if st.button('Detect Languages (Batch Texts)'):
+        if batch_texts:
+            results = detect_languages_batch(batch_texts, selected_language_batch)
             if results:
-                for text, detected_language, confidence in results:
-                    if confidence is None:
-                        st.write(f'Text: "{text}" - Detected Language: {detected_language}')
-                    elif confidence >= confidence_threshold:
-                        st.write(f'Text: "{text}" - Detected Language: {detected_language} (Confidence: {confidence:.2f})')
-                    else:
-                        st.write(f'Text: "{text}" - Confidence below threshold ({confidence_threshold:.2f}): No language detected.')
+                st.write(f'Batch Detection Results:')
+                for text, lang, conf in results:
+                    st.write(f'Text: {text}')
+                    st.write(f'Detected Language: {lang}')
+                    st.write(f'Confidence: {conf:.2f}')
+                    st.write('---')
 
-                # Interactive visualization: Language distribution
-                st.header('Interactive Visualization')
-                df_results = pd.DataFrame(results, columns=['Text', 'Language', 'Confidence'])
-                language_counts = df_results['Language'].value_counts()
-
-                plt.figure(figsize=(10, 6))
-                plt.bar(language_counts.index, language_counts.values, color='#007bff')
-                plt.xlabel('Languages')
-                plt.ylabel('Counts')
-                plt.title('Language Distribution in Batch Results')
-                plt.xticks(rotation=45)
-                plt.grid(axis='y', linestyle='--', alpha=0.7)
-                st.pyplot(plt)
-
-                # Word cloud visualization
-                st.header('Word Cloud')
+                # Create word cloud
+                st.subheader('Word Cloud')
                 create_word_cloud(results)
 
-if __name__ == '__main__':
+                # Plot pie chart
+                st.subheader('Pie Chart')
+                language_counts = pd.Series([lang for _, lang, _ in results]).value_counts()
+                plot_pie_chart(language_counts)
+
+                # Plot interactive bar chart
+                st.subheader('Interactive Bar Chart')
+                plot_interactive_bar_chart(language_counts)
+
+            else:
+                st.warning("No results available for batch detection.")
+        else:
+            st.warning("Please enter texts for batch detection.")
+
+if __name__ == "__main__":
     main()
