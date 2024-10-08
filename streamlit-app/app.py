@@ -180,14 +180,20 @@ def main():
     languages = ['Auto Detect', 'English', 'French', 'German', 'Spanish', 'Italian', 'Chinese', 'Japanese']
     selected_language_single = st.selectbox('Select language to detect:', languages)
 
+    # Confidence threshold slider
+    confidence_threshold = st.slider('Minimum Confidence Level', min_value=0.0, max_value=1.0, value=0.5, step=0.05)
+
     # Detect language for single text on button click
     if st.button('Detect Language (Single Text)'):
         if text_input:
             detected_language, confidence = detect_language(text_input, selected_language_single)
             if confidence is None:
                 st.success(f'Detected Language: {detected_language}')
-            else:
+            elif confidence >= confidence_threshold:
                 st.success(f'Detected Language: {detected_language}')
+                st.write(f'Confidence: {confidence:.2f}')
+            else:
+                st.warning(f'Confidence below threshold. Detected Language: {detected_language}')
                 st.write(f'Confidence: {confidence:.2f}')
         else:
             st.warning("Please enter some text.")
